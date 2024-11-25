@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Catalog</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+        }
+
+        .navbar {
+            background-color: #333;
+            color: white;
+            padding: 1rem;
+        }
+
+        .navbar h1 {
+            text-align: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        .product-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .product-info {
+            padding: 15px;
+        }
+
+        .product-name {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+        }
+
+        .product-category {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .product-price {
+            font-weight: bold;
+            color: #2c5282;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+
+        .filters {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .filter-select {
+            padding: 8px;
+            margin-right: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            padding: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .product-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
+        }
+
+        @media (max-width: 480px) {
+            .product-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>Jual Beli Musang</h1>
+    </nav>
+
+    <div class="container">
+        <div class="filters">
+            <select id="categoryFilter" class="filter-select">
+                <option value="">All Categories</option>
+            </select>
+            <select id="priceSort" class="filter-select">
+                <option value="">Sort by Price</option>
+                <option value="asc">Low to High</option>
+                <option value="desc">High to Low</option>
+            </select>
+        </div>
+
+        <div id="productGrid" class="product-grid">
+            <div class="loading">Loading products...</div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let products = [];
+        let categories = new Set();
+
+        // DOM Elements
+        const productGrid = document.getElementById('productGrid');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const priceSort = document.getElementById('priceSort');
+
+        // Fetch products from API
+        async function fetchProducts() {
+            try {
+                const response = await fetch('http://localhost:3000/api/products');
+                if (!response.ok) throw new Error('Failed to fetch products');
+                
+                products = await response.json();
+                
+                // Extract unique categories
+                products.forEach(product => categories.add(product.category));
+                populateCategoryFilter();
+                displayProducts(products);
+            } catch (error) {
+                productGrid.innerHTML = `<div class="error">Error loading products: ${error.message}</div>`;
+            }
+        }
+
+        // Populate category filter
+        function populateCategoryFilter() {
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categoryFilter.appendChild(option);
+            });
+        }
+
+        // Display products
+        function displayProducts(productsToShow) {
+            productGrid.innerHTML = productsToShow.map(product => `
+                <div class="product-card">
+                    <img 
+                        src="http://localhost:3000/uploads/${product.image}" 
+                        alt="${product.name}"
+                        class="product-image"
+                        onerror="this.src='https://via.placeholder.com/200'"
+                    >
+                    <div class="product-info">
+                        <h3 class="product-name">${product.name}</h3>
+                        <p class="product-category">${product.category}</p>
+                        <p class="product-price">$${product.price}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Filter and sort products
+        function filterAndSortProducts() {
+            let filteredProducts = [...products];
+
+            // Apply category filter
+            if (categoryFilter.value) {
+                filteredProducts = filteredProducts.filter(
+                    product => product.category === categoryFilter.value
+                );
+            }
+
+            // Apply price sorting
+            if (priceSort.value) {
+                filteredProducts.sort((a, b) => {
+                    if (priceSort.value === 'asc') {
+                        return a.price - b.price;
+                    } else {
+                        return b.price - a.price;
+                    }
+                });
+            }
+
+            displayProducts(filteredProducts);
+        }
+
+        // Event listeners
+        categoryFilter.addEventListener('change', filterAndSortProducts);
+        priceSort.addEventListener('change', filterAndSortProducts);
+
+        // Initial load
+        fetchProducts();
+    </script>
+</body>
+</html>
